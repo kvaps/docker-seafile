@@ -19,14 +19,14 @@ load_defaults()
 {
     chk_var  TZ                    "utc"
     chk_var  SERVER_NAME           "seafile"
-    chk_var  SERVER_HOSTNAME       "seafile"
+    chk_var  SERVER_HOSTNAME       "seafile.example.org"
     chk_var  SEAFILE_DATA          "/data/seafile-data"
     chk_var  SEAHUB_PORT           "8082"
     chk_var  MYSQL_CREATE_DB       1
 #   chk_var  MYSQL_ROOT_PASSWD     ""
     chk_var  MYSQL_HOSTNAME        "seafile-db"
     chk_var  MYSQL_PORT            "3306"
-    chk_var  MYSQL_USER            "seafile"
+    chk_var  MYSQL_USER            "root"
 #    chk_var  MYSQL_PASSWD          ""
     chk_var  MYSQL_CCNET_DBNAME    "ccnet-db"
     chk_var  MYSQL_SEAFILE_DBNAME  "seafile-db"
@@ -53,13 +53,13 @@ configure_seafile()
 {
     echo "info:  start configuring Seafile"
 
-    [ -z "$ADMIN_EMAIL" ] && echo "err:   \$ADMIN_EMAIL is not set" ; exit 1
-    [ -z "$ADMIN_PASSWD" ] && echo "err:   \$ADMIN_PASSWD is not set" ; exit 1
+    if [ -z "$ADMIN_EMAIL" ];then echo "err:   \$ADMIN_EMAIL is not set" ; exit 1 ; fi
+    if [ -z "$ADMIN_PASSWD" ];then echo "err:   \$ADMIN_PASSWD is not set" ; exit 1 ; fi
 
     IFS='' 
     
     first_step=$(cat<<EOF
-spawn   ./setup-seafile-mysql.sh
+spawn   /data/seafile/setup-seafile-mysql.sh
 set timeout 300
 expect  "Press ENTER to continue"
 send    "\r"
@@ -77,13 +77,12 @@ expect  " default \"localhost\" "
 send    "${MYSQL_HOSTNAME}\r"
 expect  " default \"3306\" "
 send    "${MYSQL_PORT}\r"
-expect  " mysql user for seafile "
 EOF
     )
 
     if [ "$MYSQL_CREATE_DB" = "1" ]; then
 
-        [ -z "$MYSQL_ROOT_PASSWD" ] && echo "err:   \$MYSQL_ROOT_PASSWD is not set" ; exit 1
+        if [ -z "$MYSQL_ROOT_PASSWD" ]; then echo "err:   \$MYSQL_ROOT_PASSWD is not set" ; exit 1 ; fi
         second_step=$(cat<<EOF
 
 expect  " root password "
@@ -95,7 +94,7 @@ EOF
 
         if [ "$MYSQL_USER" != "root"]; then
 
-        [ -z "$MYSQL_PASSWD" ] && echo "err:   \$MYSQL_PASSWD is not set" ; exit 1
+            if [ -z "$MYSQL_PASSWD" ]; then echo "err:   \$MYSQL_PASSWD is not set" ; exit 1 ; fi
             third_step=$(cat<<EOF
 
 expect  " password for * "
@@ -106,23 +105,24 @@ EOF
 
     elif [ "$MYSQL_CREATE_DB" = "2" ]; then
 
-        [ -z "$MYSQL_PASSWD" ] && echo "err:   \$MYSQL_PASSWD is not set" ; exit 1
+        if [ -z "$MYSQL_PASSWD" ]; then echo "err:   \$MYSQL_PASSWD is not set" ; exit 1 ; fi
         second_step=$(cat<<EOF
 
+expect  " mysql user for seafile "
 send    "${MYSQL_USER}\r"
 expect  " password for * "
 send    "${MYSQL_PASSWD}\r"
-expect  " ccnet database "
 EOF
     )
     fi
 
     final_step=$(cat<<EOF
 
+expect  " ccnet database " or "default \"ccnet-db\""
 send    "${MYSQL_CCNET_DBNAME}\r"
-expect  " seafile database "
+expect  " seafile database " or "default \"seafile-db\""
 send    "${MYSQL_SEAFILE_DBNAME}\r"
-expect  " seahub database "
+expect  " seahub database " or "default \"seahub-db\""
 send    "${MYSQL_SEAHUB_DBNAME}\r"
 expect  "Press ENTER to continue"
 send    "\r"
@@ -130,13 +130,13 @@ expect  "Your seafile server configuration has been finished successfully."
 exit    0
 EOF
     )
-    echo $first_step $second_step $third_step $final_step #| expect
+    echo $first_step $second_step $third_step $final_step | expect
 
     unset IFS
-    ./seafile.sh start
+    /data/seafile/seafile.sh start
 
     expect <<EOF
-spawn   ./seahub.sh start
+spawn   /data/seafile/seahub.sh start
 set timeout 300
 expect  " admin email "
 send    "${ADMIN_EMAIL}\r"
@@ -147,8 +147,8 @@ send    "${ADMIN_PASSWD}\r"
 expect  "Done."
 exit    0
 EOF
-    ./seafile.sh stop
-    ./seafile.sh stop
+    /data/seafile/seafile.sh stop
+    /data/seafile/seafile.sh stop
 
 
     echo "info:  finished configuring Seafile"
@@ -160,7 +160,7 @@ start_services()
                       /usr/bin/supervisord
 } 
 
-[ ! -d /data/seafile ] && export FIRST_SETUP=true #Check for first setup
+[ ! -d /data/conf ] && export FIRST_SETUP=true #Check for first setup
 
                                 load_defaults
                                 set_timezone

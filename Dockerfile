@@ -15,11 +15,16 @@ RUN yum -y install python-imaging MySQL-python python-simplejson python-setuptoo
 RUN yum -y install expect
 
 RUN yum -y install which
+RUN yum -y install epel-release
+RUN yum -y install supervisor
 
 ADD start.sh /bin/start.sh
+ADD supervisord.conf /etc/supervisord.conf
+ADD /wrappers/ /bin/
 ENTRYPOINT ["/bin/start.sh"]
 
 # Attach data volume
 VOLUME ["/data"]
 
 EXPOSE 8082 8000
+
