@@ -101,16 +101,20 @@ server {
     client_max_body_size 5g;
 
     location / {
-            proxy_redirect off;
-            proxy_buffering off;
-            proxy_set_header        Host                    $host;
-            proxy_set_header        Destination             $http_destination;
-            proxy_set_header        X-Real-IP               $remote_addr;
-            proxy_set_header        X-Forwarded-For         $proxy_add_x_forwarded_for;
-            proxy_set_header        X-Forwarded-Proto       $scheme;
-            add_header              Front-End-Https         on;
             proxy_pass              http://10.10.10.124:8000/;
+            proxy_set_header        Host            $host;
+            proxy_set_header        X-Real-IP       $remote_addr;
+            proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
     }
+    
+    location /seafhttp {
+            rewrite                 ^/seafhttp(.*)$ $1 break;
+            proxy_pass              http://seafile-internal.BLARGH.com.au:8082;
+            client_max_body_size    0;
+            proxy_connect_timeout   36000s;
+            proxy_read_timeout      36000s;
+    }
+
 }
 ```
 
