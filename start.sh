@@ -158,6 +158,26 @@ EOF
     echo "info:  finished configuring Seafile"
 }
 
+configure_ssl()
+{
+    if [ ! -f /data/certs/$(hostname -f).crt ] ; then
+        echo "info:  start configuring SSL"
+
+        # Generate key and certificate
+        openssl req -new -newkey rsa:4096 -days 3650 -nodes -x509 \
+                    -subj "/CN=$(hostname -f)" \
+                    -keyout /data/certs/$(hostname -f).key \
+                    -out /data/certs/$(hostname -f).crt
+    
+        sed -i -e '/ssl_certificate /c\    ssl_certificate /etc/pki/tls/certs/'$(hostname -f)'.crt;' /etc/nginx/conf.d/default.conf
+        sed -i -e '/ssl_certificate_key/c\    ssl_certificate_key /etc/pki/tls/private/'$(hostname -f)'.key;' /etc/nginx/conf.d/default.conf
+
+        echo "info:  finished configuring SSL"
+    else
+        echo "warn:  SSL already configured, skipping..."
+    fi
+}
+
 start_services()
 {
              echo "info:  Starting services"
@@ -171,5 +191,6 @@ start_services()
 if [ "$FIRST_SETUP" = true ] ; then
                                 move_dirs
                                 configure_seafile
+                                configure_ssl
 fi
                                 start_services
