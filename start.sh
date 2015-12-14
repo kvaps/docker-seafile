@@ -19,7 +19,7 @@ load_defaults()
 {
     chk_var  TZ                    "utc"
     chk_var  SERVER_NAME           "seafile"
-    chk_var  SERVER_HOSTNAME       "seafile.example.org"
+    chk_var  SERVER_HOSTNAME       `hostname -f`
     chk_var  SEAFILE_DATA          "/data/seafile-data"
     chk_var  SEAHUB_PORT           "8082"
     chk_var  MYSQL_CREATE_DB       1
@@ -55,6 +55,7 @@ configure_seafile()
 
     if [ -z "$ADMIN_EMAIL" ];then echo "err:   \$ADMIN_EMAIL is not set" ; exit 1 ; fi
     if [ -z "$ADMIN_PASSWD" ];then echo "err:   \$ADMIN_PASSWD is not set" ; exit 1 ; fi
+    if [ ! "$SERVER_HOSTNAME" =~ "." ];then echo "err:   Please use fqdn or ip for \$SERVER_HOSTNAME" ; exit 1 ; fi
 
     IFS='' 
     
@@ -150,6 +151,8 @@ EOF
     /data/seafile/seafile.sh stop
     /data/seafile/seafile.sh stop
 
+    sed -i 's/:8000//g' /data/conf/ccnet.conf
+    sed "/PORT/ a\        \x27FILE_SERVER_ROOT\x27: \x27http://$(hostname -f)/seafhttp\x27," /data/conf/seahub_settings.py
 
     echo "info:  finished configuring Seafile"
 }
