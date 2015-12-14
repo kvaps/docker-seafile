@@ -2,6 +2,7 @@
 l=/data/logs/ccnet.log
 d=/data/seafile
 
-trap '{ $d/seafile.sh stop; exit 0; }' EXIT 
+trap '{ $d/seahub.sh stop; exit 0; }' EXIT 
+sleep 5
 $d/seahub.sh start 
 tail -f -n1 $l
